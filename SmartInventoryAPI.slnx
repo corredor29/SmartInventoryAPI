@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/Tests/">
+    <Project Path="Tests/SmartInventory.Tests/SmartInventory.Tests.csproj" />
+  </Folder>
+  <Project Path="Api/Api.csproj" />
+  <Project Path="Application/Application.csproj" />
+  <Project Path="Domain/Domain.csproj" />
+  <Project Path="Infrastructure/Infrastructure.csproj" />
+</Solution>
