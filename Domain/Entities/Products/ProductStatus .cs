@@ -2,11 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Domain.ValueObjects.Products.ProductStatus;
+using Domain.Common;
+using Domain.ValueObject.Products.ProductStatus;
 
 namespace Domain.Entities.Products
 {
-    public class ProductStatus 
+    public sealed class ProductStatus : BaseEntity
     {
         public ProductStatusName Name { get; private set; } = null!;
 

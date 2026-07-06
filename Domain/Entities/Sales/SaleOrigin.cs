@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Domain.Common;
-using Domain.ValueObjects.Sales.SaleOrigin;
+using Domain.ValueObject.Sales.SaleOrigin;
 
 namespace Domain.Entities.Sales
 {

@@ -17,7 +17,7 @@ namespace Infrastructure.Persistence.Configurations
                 .HasColumnName("name")
                 .HasMaxLength(50)
                 .IsRequired()
-                .HasConversion(v => v.Value, v => new ChatSessionStatusName(v));
+                .HasConversion(v => v.Value, v => ChatSessionStatusName.Create(v));
 
             builder.HasIndex(c => c.Name).IsUnique();
         }

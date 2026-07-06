@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Domain.Common;
 using Domain.Entities.Sales;
 using Domain.Entities.Chats;
+using Domain.Entities.Users;
 using Domain.ValueObject.Customers.Customer;
 namespace Domain.Entities.Customers
 {
@@ -15,6 +16,7 @@ namespace Domain.Entities.Customers
         public Phone?          PhoneNumber    { get; private set; }
         public DocumentNumber? DocumentNumber { get; private set; }
 
+        public User? User { get; private set; }
         public ICollection<Sale> Sales { get; private set; } = new List<Sale>();
         public ICollection<ChatSession> ChatSessions { get; private set; } = new List<ChatSession>();
 

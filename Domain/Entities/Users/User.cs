@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Domain.Common;
 using Domain.Entities.Customers;
+using Domain.Entities.Chats;
 using Domain.ValueObject.Users.User;
 namespace Domain.Entities.Users
 {
@@ -17,6 +18,7 @@ namespace Domain.Entities.Users
 
         public Role      Role     { get; private set; } = null!;
         public Customer?  Customer { get; private set; }
+        public ICollection<ChatEscalation> AssignedEscalations { get; private set; } = new List<ChatEscalation>();
 
         private User() { }
 

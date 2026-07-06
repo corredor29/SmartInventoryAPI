@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Domain.ValueObjects.Chats.ChatSessionStatus
+namespace Domain.ValueObject.Chats.ChatSessionStatus
 {
     public sealed record ChatSessionStatusName
     {

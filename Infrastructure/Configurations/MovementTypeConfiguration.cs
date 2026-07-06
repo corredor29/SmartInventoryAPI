@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Domain.Entities.Inventories;
-using Domain.ValueObject.Inventories.MovementType;
+using Domain.Entities.Products;
+using Domain.ValueObject.Products.MovementType;
 
 namespace Infrastructure.Persistence.Configurations
 {
@@ -17,7 +17,7 @@ namespace Infrastructure.Persistence.Configurations
                 .HasColumnName("name")
                 .HasMaxLength(50)
                 .IsRequired()
-                .HasConversion(v => v.Value, v => new MovementTypeName(v));
+                .HasConversion(v => v.Value, v => MovementTypeName.Create(v));
 
             builder.HasIndex(m => m.Name).IsUnique();
         }

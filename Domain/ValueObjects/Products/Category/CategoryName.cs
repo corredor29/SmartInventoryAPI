@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Domain.ValueObjects.Products.Category
+namespace Domain.ValueObject.Products.Category
 {
     public sealed record CategoryName
     {

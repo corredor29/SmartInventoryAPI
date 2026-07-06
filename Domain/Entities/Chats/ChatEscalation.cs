@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Domain.Common;
 using Domain.Entities.Users;
 using Domain.ValueObject.Chats.ChatEscalation;
+using ResolvedAtVO = Domain.ValueObject.Chats.ChatEscalation.ResolvedAt;
 namespace Domain.Entities.Chats
 {
     public sealed class ChatEscalation : BaseEntity
@@ -13,7 +14,7 @@ namespace Domain.Entities.Chats
         public int               EscalationStatusId { get; private set; }
         public int?              AssignedUserId      { get; private set; }
         public EscalationReason? Reason              { get; private set; }
-        public ResolvedAt?       ResolvedAt          { get; private set; }
+        public ResolvedAtVO?     ResolvedAt          { get; private set; }
 
         public ChatSession       ChatSession       { get; private set; } = null!;
         public EscalationStatus  EscalationStatus  { get; private set; } = null!;
@@ -40,7 +41,7 @@ namespace Domain.Entities.Chats
 
         public void Resolve()
         {
-            ResolvedAt = ChatEscalation.ResolvedAt.Now();
+            ResolvedAt = ResolvedAtVO.Now();
         }
     }
 }
