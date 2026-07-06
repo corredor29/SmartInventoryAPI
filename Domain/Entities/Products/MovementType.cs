@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Domain.Common;
-using Domain.ValueObjects.Products.Category;
-using Domain.ValueObjects.Products.MovementType;
+using Domain.Entities.Inventories;
+using Domain.ValueObject.Products.Category;
+using Domain.ValueObject.Products.MovementType;
 
 namespace Domain.Entities.Products
 {
@@ -12,7 +13,7 @@ namespace Domain.Entities.Products
     {
         public MovementTypeName Name { get; private set; } = null!;
 
-        public ICollection<InventoryMovement> InventoryMovements { get; private set; } = new List<InventoryMovement>();
+        public ICollection<InventoryMovement> Movements { get; private set; } = new List<InventoryMovement>();
 
         private MovementType() { }
 

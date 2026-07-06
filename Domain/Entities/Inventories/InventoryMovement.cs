@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Domain.Common;
 using Domain.ValueObject.Inventories.InventoryMovement;
+using Domain.Entities.Products;
 namespace Domain.Entities.Inventories
 {
     public sealed class InventoryMovement : BaseEntity

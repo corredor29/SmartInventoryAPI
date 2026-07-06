@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: smartinventory-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1097912452
+      POSTGRES_DB: smartinventory
+    ports:
+      - "5433:5432"
+    volumes:
+      - smartinventory_data:/var/lib/postgresql/data
+
+volumes:
+  smartinventory_data:

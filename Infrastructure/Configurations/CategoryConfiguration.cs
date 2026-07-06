@@ -13,11 +13,11 @@ namespace Infrastructure.Persistence.Configurations
             builder.HasKey(c => c.Id);
             builder.Property(c => c.Id).HasColumnName("category_id");
 
-            builder.Property(c => c.Name)
-                .HasColumnName("name")
-                .HasMaxLength(100)
-                .IsRequired()
-                .HasConversion(v => v.Value, v => new CategoryName(v));
+        builder.Property(c => c.Name)
+            .HasColumnName("name")
+            .HasMaxLength(100)
+            .IsRequired()
+            .HasConversion(v => v.Value, v => CategoryName.Create(v));
 
             builder.HasIndex(c => c.Name).IsUnique();
         }

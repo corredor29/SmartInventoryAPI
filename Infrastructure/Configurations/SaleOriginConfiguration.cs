@@ -17,7 +17,7 @@ namespace Infrastructure.Persistence.Configurations
                 .HasColumnName("name")
                 .HasMaxLength(50)
                 .IsRequired()
-                .HasConversion(v => v.Value, v => new SaleOriginName(v));
+                .HasConversion(v => v.Value, v => SaleOriginName.Create(v));
 
             builder.HasIndex(s => s.Name).IsUnique();
         }

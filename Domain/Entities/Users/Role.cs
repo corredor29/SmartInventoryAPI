@@ -11,6 +11,8 @@ namespace Domain.Entities.Users
     {
         public RoleName Name { get; private set; } = null!;
 
+        public ICollection<User> Users { get; private set; } = new List<User>();
+
         private Role() { }
 
         public Role(RoleName name)

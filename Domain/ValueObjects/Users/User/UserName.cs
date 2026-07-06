@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Domain.ValueObjects.Users.User
+namespace Domain.ValueObject.Users.User
 {
     public record UserName
     {
