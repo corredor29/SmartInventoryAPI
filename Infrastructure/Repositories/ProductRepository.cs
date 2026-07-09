@@ -11,6 +11,15 @@ namespace Infrastructure.Repositories
     {
         public ProductRepository(AppDbContext context) : base(context) { }
 
+        public async Task<IReadOnlyList<Product>> GetAllWithDetailsAsync()
+        {
+            return await DbSet
+                .Include(p => p.Category)
+                .Include(p => p.ProductStatus)
+                .Include(p => p.Inventory)
+                .ToListAsync();
+        }
+
         public async Task<IReadOnlyList<Product>> SearchAsync(string query)
         {
             var lowered = query.ToLower();
@@ -28,6 +37,8 @@ namespace Infrastructure.Repositories
         public async Task<Product?> GetByIdWithInventoryAsync(int productId)
         {
             return await DbSet
+                .Include(p => p.Category)
+                .Include(p => p.ProductStatus)
                 .Include(p => p.Inventory)
                 .FirstOrDefaultAsync(p => p.Id == productId);
         }

@@ -35,6 +35,10 @@ namespace Infrastructure.Persistence.Configurations
                 .HasColumnName("embedding")
                 .HasColumnType("vector(1536)");
 
+            builder.Property(p => p.ImageUrl)
+                .HasColumnName("image_url")
+                .HasMaxLength(500);
+
             builder.Property(p => p.CreatedAt).HasColumnName("created_at");
             builder.Property(p => p.CategoryId).HasColumnName("category_id");
             builder.Property(p => p.ProductStatusId).HasColumnName("product_status_id");
