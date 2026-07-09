@@ -21,7 +21,7 @@ namespace Application.Services.Products
 
         public async Task<IReadOnlyList<ProductDto>> GetAllAsync()
         {
-            var products = await _unitOfWork.Products.GetAllAsync();
+            var products = await _unitOfWork.Products.GetAllWithDetailsAsync();
             return products.Select(ToDto).ToList();
         }
 
@@ -44,7 +44,8 @@ namespace Application.Services.Products
                 productStatusId: request.ProductStatusId,
                 name: new ProductName(request.Name),
                 price: new ProductPrice(request.Price),
-                description: request.Description is null ? null : new ProductDescription(request.Description)
+                description: request.Description is null ? null : new ProductDescription(request.Description),
+                imageUrl: request.ImageUrl
             );
 
             await _unitOfWork.Products.AddAsync(product);
@@ -67,7 +68,8 @@ namespace Application.Services.Products
                 name: new ProductName(request.Name),
                 price: new ProductPrice(request.Price),
                 description: request.Description is null ? null : new ProductDescription(request.Description),
-                categoryId: request.CategoryId
+                categoryId: request.CategoryId,
+                imageUrl: request.ImageUrl
             );
 
             _unitOfWork.Products.Update(product);
@@ -107,6 +109,7 @@ namespace Application.Services.Products
             CategoryName = product.Category?.Name.Value ?? string.Empty,
             StatusName = product.ProductStatus?.Name.Value ?? string.Empty,
             CurrentStock = product.Inventory?.CurrentStock.Value ?? 0,
+            ImageUrl = product.ImageUrl,
         };
     }
 }

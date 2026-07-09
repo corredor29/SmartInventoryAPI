@@ -9,5 +9,6 @@ namespace Application.DTOs.Products.Product
         public string CategoryName { get; set; } = string.Empty;
         public string StatusName { get; set; } = string.Empty;
         public int CurrentStock { get; set; }
+        public string? ImageUrl { get; set; }
     }
 }

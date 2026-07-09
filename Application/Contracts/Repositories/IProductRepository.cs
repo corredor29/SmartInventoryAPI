@@ -6,6 +6,8 @@ namespace Application.Contracts.Repositories
 {
     public interface IProductRepository : IRepository<Product>
     {
+        Task<IReadOnlyList<Product>> GetAllWithDetailsAsync();
+
         Task<IReadOnlyList<Product>> SearchAsync(string query);
 
         Task<Product?> GetByIdWithInventoryAsync(int productId);

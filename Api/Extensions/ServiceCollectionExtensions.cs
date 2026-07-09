@@ -18,6 +18,7 @@ using Application.Contracts.Services.Inventories;
 using Application.Contracts.Services.Sales;
 using Application.Contracts.Services.Invoices;
 using Application.Contracts.Services.Chats;
+using Application.Contracts.Services.Dashboard;
 using Application.Services;
 using Application.Services.Users;
 using Application.Services.Customers;
@@ -26,9 +27,10 @@ using Application.Services.Inventories;
 using Application.Services.Sales;
 using Application.Services.Invoices;
 using Application.Services.Chats;
+using Application.Services.Dashboard;
 using Application.Validators.Products;
-using Infrastructure;
 using Api.Filters;
+using Infrastructure;
 
 namespace Api.Extensions
 {
@@ -81,6 +83,8 @@ namespace Api.Extensions
             services.AddScoped<IChatMessageService, ChatMessageService>();
             services.AddScoped<IEscalationStatusService, EscalationStatusService>();
             services.AddScoped<IChatEscalationService, ChatEscalationService>();
+
+            services.AddScoped<IDashboardService, DashboardService>();
 
             services.AddValidatorsFromAssemblyContaining<CreateProductRequestValidator>();
             services.AddFluentValidationAutoValidation();

@@ -27,5 +27,17 @@ namespace Api.Controllers
 
             return Ok(result);
         }
+
+        [HttpPost("register")]
+        [EnableRateLimiting("auth")]
+        public async Task<IActionResult> Register([FromBody] RegisterRequestDto request)
+        {
+            var result = await _authService.RegisterAsync(request);
+
+            if (result is null)
+                return BadRequest(new { message = "Ya existe una cuenta registrada con ese email." });
+
+            return Ok(result);
+        }
     }
 }
