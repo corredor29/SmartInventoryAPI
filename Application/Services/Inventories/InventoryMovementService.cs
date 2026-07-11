@@ -19,23 +19,20 @@ namespace Application.Services.Inventories
 
         public async Task<IReadOnlyList<InventoryMovementDto>> GetAllAsync()
         {
-            var movements = await _unitOfWork.Repository<InventoryMovement>().GetAllAsync();
+            var movements = await _unitOfWork.InventoryMovements.GetAllAsync();
             return movements.Select(ToDto).ToList();
         }
 
         public async Task<InventoryMovementDto?> GetByIdAsync(int id)
         {
-            var movement = await _unitOfWork.Repository<InventoryMovement>().GetByIdAsync(id);
+            var movement = await _unitOfWork.InventoryMovements.GetByIdAsync(id);
             return movement is null ? null : ToDto(movement);
         }
 
         public async Task<IReadOnlyList<InventoryMovementDto>> GetByInventoryIdAsync(int inventoryId)
         {
-            var movements = await _unitOfWork.Repository<InventoryMovement>().GetAllAsync();
-            return movements
-                .Where(m => m.InventoryId == inventoryId)
-                .Select(ToDto)
-                .ToList();
+            var movements = await _unitOfWork.InventoryMovements.GetByInventoryIdAsync(inventoryId);
+            return movements.Select(ToDto).ToList();
         }
 
         private static InventoryMovementDto ToDto(InventoryMovement movement) => new()

@@ -40,5 +40,12 @@ namespace Domain.Entities.Chats
         {
             ChatSessionStatusId = chatSessionStatusId > 0 ? chatSessionStatusId : throw new ArgumentException("ChatSessionStatusId must be greater than 0.");
         }
+
+        public void LinkCustomer(int customerId)
+        {
+            if (customerId <= 0)
+                throw new ArgumentException("CustomerId must be greater than 0.");
+            CustomerId ??= customerId;
+        }
     }
 }

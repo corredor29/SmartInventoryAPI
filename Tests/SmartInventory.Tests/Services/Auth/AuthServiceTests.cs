@@ -59,6 +59,7 @@ namespace SmartInventory.Tests.Services.Auth
             Assert.Equal("Ana Torres", result.Name);
             Assert.Equal("ana@test.com", result.Email);
             Assert.Equal("Administrador", result.Role);
+            Assert.Equal(1, result.UserId);
         }
 
         [Fact]

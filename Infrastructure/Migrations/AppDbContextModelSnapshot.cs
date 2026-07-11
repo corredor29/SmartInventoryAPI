@@ -513,6 +513,12 @@ namespace Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("customer_id");
 
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("payment_method");
+
                     b.Property<DateTime>("SaleDate")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("sale_date");

@@ -18,9 +18,9 @@ namespace Infrastructure.Repositories
             DbSet = context.Set<T>();
         }
 
-        public async Task<T?> GetByIdAsync(int id) => await DbSet.FindAsync(id);
+        public virtual async Task<T?> GetByIdAsync(int id) => await DbSet.FindAsync(id);
 
-        public async Task<IReadOnlyList<T>> GetAllAsync() => await DbSet.ToListAsync();
+        public virtual async Task<IReadOnlyList<T>> GetAllAsync() => await DbSet.ToListAsync();
 
         public async Task AddAsync(T entity) => await DbSet.AddAsync(entity);
 

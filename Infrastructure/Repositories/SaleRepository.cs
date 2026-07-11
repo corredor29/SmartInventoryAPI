@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Application.Contracts.Repositories;
@@ -16,9 +17,11 @@ namespace Infrastructure.Repositories
             return await DbSet
                 .Include(s => s.Details)
                     .ThenInclude(d => d.Product)
+                        .ThenInclude(p => p!.Category)
                 .Include(s => s.Customer)
                 .Include(s => s.SaleOrigin)
                 .Include(s => s.SaleStatus)
+                .Include(s => s.Invoice)
                 .FirstOrDefaultAsync(s => s.Id == saleId);
         }
 
@@ -27,10 +30,27 @@ namespace Infrastructure.Repositories
             return await DbSet
                 .Include(s => s.Details)
                     .ThenInclude(d => d.Product)
-                        .ThenInclude(p => p.Category)
+                        .ThenInclude(p => p!.Category)
                 .Include(s => s.Customer)
                 .Include(s => s.SaleOrigin)
                 .Include(s => s.SaleStatus)
+                .Include(s => s.Invoice)
+                .OrderByDescending(s => s.SaleDate)
+                .ToListAsync();
+        }
+
+        public async Task<IReadOnlyList<Sale>> GetByCustomerIdWithDetailsAsync(int customerId)
+        {
+            return await DbSet
+                .Include(s => s.Details)
+                    .ThenInclude(d => d.Product)
+                        .ThenInclude(p => p!.Category)
+                .Include(s => s.Customer)
+                .Include(s => s.SaleOrigin)
+                .Include(s => s.SaleStatus)
+                .Include(s => s.Invoice)
+                .Where(s => s.CustomerId == customerId)
+                .OrderByDescending(s => s.SaleDate)
                 .ToListAsync();
         }
     }

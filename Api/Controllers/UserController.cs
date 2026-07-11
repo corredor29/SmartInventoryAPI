@@ -24,7 +24,7 @@ namespace Api.Controllers
             return Ok(users);
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {
             var user = await _userService.GetByIdAsync(id);
@@ -34,18 +34,32 @@ namespace Api.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateUserRequest request)
         {
-            var user = await _userService.CreateAsync(request);
-            return CreatedAtAction(nameof(GetById), new { id = user.UserId }, user);
+            try
+            {
+                var user = await _userService.CreateAsync(request);
+                return CreatedAtAction(nameof(GetById), new { id = user.UserId }, user);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
-        [HttpPut("{id}")]
+        [HttpPut("{id:int}")]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateUserRequest request)
         {
-            var user = await _userService.UpdateAsync(id, request);
-            return user is null ? NotFound() : Ok(user);
+            try
+            {
+                var user = await _userService.UpdateAsync(id, request);
+                return user is null ? NotFound() : Ok(user);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
-        [HttpDelete("{id}")]
+        [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {
             var deleted = await _userService.DeleteAsync(id);

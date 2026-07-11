@@ -15,5 +15,17 @@ namespace Infrastructure.Repositories
             var customers = await DbSet.ToListAsync();
             return customers.Find(c => c.DocumentNumber != null && c.DocumentNumber.Value == documentNumber);
         }
+
+        public async Task<Customer?> GetByEmailAsync(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return null;
+
+            var normalized = email.Trim().ToLowerInvariant();
+            var customers = await DbSet.ToListAsync();
+            return customers.Find(c =>
+                c.Email != null &&
+                string.Equals(c.Email.Value, normalized, System.StringComparison.OrdinalIgnoreCase));
+        }
     }
 }

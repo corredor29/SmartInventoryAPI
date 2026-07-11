@@ -14,8 +14,10 @@ namespace Infrastructure.Repositories
         {
             return await DbSet
                 .Include(cs => cs.Messages)
+                    .ThenInclude(m => m.SenderType)
                 .Include(cs => cs.Escalation)
                 .Include(cs => cs.ChatSessionStatus)
+                .Include(cs => cs.Customer)
                 .FirstOrDefaultAsync(cs => cs.Id == chatSessionId);
         }
     }

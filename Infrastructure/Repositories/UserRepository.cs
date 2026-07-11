@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Application.Contracts.Repositories;
@@ -14,6 +16,21 @@ namespace Infrastructure.Repositories
         {
             var users = await DbSet.Include(u => u.Role).ToListAsync();
             return users.Find(u => u.Email.Value == email.ToLowerInvariant());
+        }
+
+        public async Task<IReadOnlyList<User>> GetAllWithRoleAsync()
+        {
+            return await DbSet
+                .Include(u => u.Role)
+                .OrderBy(u => u.Id)
+                .ToListAsync();
+        }
+
+        public async Task<User?> GetByIdWithRoleAsync(int id)
+        {
+            return await DbSet
+                .Include(u => u.Role)
+                .FirstOrDefaultAsync(u => u.Id == id);
         }
     }
 }

@@ -17,6 +17,7 @@ namespace Infrastructure.UnitOfWork
 
         public IProductRepository Products { get; }
         public IInventoryRepository Inventory { get; }
+        public IInventoryMovementRepository InventoryMovements { get; }
         public ISaleRepository Sales { get; }
         public IInvoiceRepository Invoices { get; }
         public ICustomerRepository Customers { get; }
@@ -30,6 +31,7 @@ namespace Infrastructure.UnitOfWork
 
             Products = new Repositories.ProductRepository(_context);
             Inventory = new Repositories.InventoryRepository(_context);
+            InventoryMovements = new Repositories.InventoryMovementRepository(_context);
             Sales = new Repositories.SaleRepository(_context);
             Invoices = new Repositories.InvoiceRepository(_context);
             Customers = new Repositories.CustomerRepository(_context);

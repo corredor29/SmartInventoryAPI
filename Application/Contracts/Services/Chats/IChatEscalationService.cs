@@ -8,7 +8,8 @@ namespace Application.Contracts.Services.Chats
     {
         Task<IReadOnlyList<ChatEscalationDto>> GetPendingAsync();
         Task<ChatEscalationDto?> GetByIdAsync(int id);
-        Task<ChatEscalationDto> CreateAsync(CreateChatEscalationRequest request);
+        /// <summary>Crea escalación o reutiliza una abierta. Created=true si es nueva.</summary>
+        Task<(ChatEscalationDto Escalation, bool Created)> CreateAsync(CreateChatEscalationRequest request);
         Task<ChatEscalationDto?> AssignAsync(int id, AssignChatEscalationRequest request);
         Task<ChatEscalationDto?> ResolveAsync(int id);
     }

@@ -11,8 +11,8 @@ namespace Application.Validators.Inventories
                 .NotEqual(0).WithMessage("La cantidad de ajuste no puede ser 0.");
 
             RuleFor(x => x.Reason)
-                .MaximumLength(255).WithMessage("El motivo no puede exceder 255 caracteres.")
-                .When(x => !string.IsNullOrEmpty(x.Reason));
+                .NotEmpty().WithMessage("El motivo del ajuste es obligatorio.")
+                .MaximumLength(255).WithMessage("El motivo no puede exceder 255 caracteres.");
         }
     }
 }

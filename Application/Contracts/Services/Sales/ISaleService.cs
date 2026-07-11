@@ -8,7 +8,8 @@ namespace Application.Contracts.Services.Sales
     {
         Task<IReadOnlyList<SaleDto>> GetAllAsync();
         Task<SaleDto?> GetByIdAsync(int id);
-        Task<SaleResultDto> CreateAsync(CreateSaleRequest request);
+        Task<IReadOnlyList<SaleDto>> GetMineAsync(int authenticatedUserId);
+        Task<SaleResultDto> CreateAsync(CreateSaleRequest request, int? authenticatedUserId = null);
         Task<SaleDto?> ChangeStatusAsync(int id, int saleStatusId);
     }
 }

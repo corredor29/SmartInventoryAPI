@@ -9,6 +9,7 @@ namespace Application.Contracts.Repositories
     {
         IProductRepository Products { get; }
         IInventoryRepository Inventory { get; }
+        IInventoryMovementRepository InventoryMovements { get; }
         ISaleRepository Sales { get; }
         IInvoiceRepository Invoices { get; }
         ICustomerRepository Customers { get; }

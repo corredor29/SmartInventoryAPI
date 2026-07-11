@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -5,6 +6,7 @@ using Application.Contracts.Repositories;
 using Application.Contracts.Services.Inventories;
 using Application.DTOs.Inventories.Inventory;
 using Domain.Entities.Inventories;
+using Domain.Entities.Products;
 
 namespace Application.Services.Inventories
 {
@@ -47,11 +49,12 @@ namespace Application.Services.Inventories
 
             _unitOfWork.Inventory.Update(inventory);
 
-            var movementTypeId = request.QuantityChange > 0 ? 1 : 2; // 1 = Entrada, 2 = Salida (según seed)
+            var typeName = request.QuantityChange > 0 ? "Entrada" : "Salida";
+            var movementTypeId = await ResolveMovementTypeIdAsync(typeName);
             var movement = InventoryMovement.CreateExit(
                 inventoryId: inventory.Id,
                 movementTypeId: movementTypeId,
-                quantity: System.Math.Abs(request.QuantityChange),
+                quantity: Math.Abs(request.QuantityChange),
                 reason: request.Reason
             );
 
@@ -59,6 +62,18 @@ namespace Application.Services.Inventories
             await _unitOfWork.SaveChangesAsync();
 
             return ToDto(inventory);
+        }
+
+        private async Task<int> ResolveMovementTypeIdAsync(string name)
+        {
+            var items = await _unitOfWork.Repository<MovementType>().GetAllAsync();
+            var match = items.FirstOrDefault(i =>
+                string.Equals(i.Name.Value, name, StringComparison.OrdinalIgnoreCase));
+
+            if (match is null)
+                throw new InvalidOperationException($"No se encontró el tipo de movimiento '{name}'.");
+
+            return match.Id;
         }
 
         private static InventoryDto ToDto(Inventory inventory) => new()

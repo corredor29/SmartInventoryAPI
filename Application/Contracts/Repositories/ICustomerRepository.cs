@@ -6,5 +6,6 @@ namespace Application.Contracts.Repositories
     public interface ICustomerRepository : IRepository<Customer>
     {
         Task<Customer?> GetByDocumentNumberAsync(string documentNumber);
+        Task<Customer?> GetByEmailAsync(string email);
     }
 }

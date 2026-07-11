@@ -8,5 +8,6 @@ namespace Application.Contracts.Repositories
     {
         Task<Sale?> GetByIdWithDetailsAsync(int saleId);
         Task<IReadOnlyList<Sale>> GetAllWithDetailsAsync();
+        Task<IReadOnlyList<Sale>> GetByCustomerIdWithDetailsAsync(int customerId);
     }
 }

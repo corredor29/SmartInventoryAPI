@@ -27,13 +27,18 @@ namespace Application.Services
             var jwtAudience = _configuration["Jwt:Audience"] ?? "SmartInventoryClient";
             var expiryMinutes = int.Parse(_configuration["Jwt:ExpiryMinutes"] ?? "120");
 
+            // Claims cortos ("role", "nameid") para que [Authorize(Roles=...)] funcione
+            // con MapInboundClaims = false en JwtBearer.
             var claims = new List<Claim>
             {
-                new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new(ClaimTypes.Name, user.Name.Value),
-                new(ClaimTypes.Email, user.Email.Value),
-                new(ClaimTypes.Role, user.Role.Name.Value),
+                new("nameid", user.Id.ToString()),
+                new("unique_name", user.Name.Value),
+                new("email", user.Email.Value),
+                new("role", user.Role.Name.Value),
             };
+
+            if (user.CustomerId is int customerId)
+                claims.Add(new Claim("customerId", customerId.ToString()));
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
             var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
