@@ -8,5 +8,7 @@ namespace Application.DTOs.Products.Product
         public int CategoryId { get; set; }
         public int ProductStatusId { get; set; }
         public string? ImageUrl { get; set; }
+        /// <summary>Stock inicial al crear el producto (por defecto 0).</summary>
+        public int InitialStock { get; set; }
     }
 }

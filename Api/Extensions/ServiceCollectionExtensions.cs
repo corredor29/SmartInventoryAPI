@@ -1,3 +1,5 @@
+using System;
+using System.Security.Claims;
 using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -55,7 +57,12 @@ namespace Api.Extensions
             services.AddScoped<ITokenService, TokenService>();
             services.AddScoped<IAuthService, AuthService>();
 
-            services.AddHttpClient<IChatbotClient, FastApiChatbotClient>();
+            services.AddHttpClient<IChatbotClient, FastApiChatbotClient>(client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(90);
+            });
+
+            services.AddHttpClient<IEmbeddingService, OpenAiEmbeddingService>();
 
             services.AddScoped<IRoleService, RoleService>();
             services.AddScoped<IUserService, UserService>();
@@ -106,6 +113,8 @@ namespace Api.Extensions
             })
             .AddJwtBearer(options =>
             {
+                // .NET 8+: MapInboundClaims=false deja "role"/"nameid" cortos en el JWT.
+                options.MapInboundClaims = false;
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
@@ -115,6 +124,8 @@ namespace Api.Extensions
                     ValidIssuer = jwtIssuer,
                     ValidAudience = jwtAudience,
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+                    NameClaimType = ClaimTypes.Name,
+                    RoleClaimType = "role",
                 };
 
                 options.Events = new JwtBearerEvents

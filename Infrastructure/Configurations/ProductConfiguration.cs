@@ -37,7 +37,7 @@ namespace Infrastructure.Persistence.Configurations
 
             builder.Property(p => p.ImageUrl)
                 .HasColumnName("image_url")
-                .HasMaxLength(500);
+                .HasMaxLength(1000);
 
             builder.Property(p => p.CreatedAt).HasColumnName("created_at");
             builder.Property(p => p.CategoryId).HasColumnName("category_id");

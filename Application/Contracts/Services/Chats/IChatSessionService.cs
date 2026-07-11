@@ -10,5 +10,7 @@ namespace Application.Contracts.Services.Chats
         Task<ChatSessionDto?> GetByIdAsync(int id);
         Task<ChatSessionDto> CreateAsync(CreateChatSessionRequest request);
         Task<ChatSessionDto?> ChangeStatusAsync(int id, int chatSessionStatusId);
+        /// <summary>Asocia un Customer a la sesión si aún no tiene uno.</summary>
+        Task<ChatSessionDto?> LinkCustomerAsync(int sessionId, int customerId);
     }
 }

@@ -98,7 +98,7 @@ namespace SmartInventory.Tests.Services.Sales
             _invoiceRepositoryMock.Setup(r => r.GetNextSequenceAsync()).ReturnsAsync(1);
             _invoiceRepositoryMock.Setup(r => r.AddAsync(It.IsAny<Invoice>())).Returns(Task.CompletedTask);
 
-            var fullSale = new Sale(customerId: 5, saleOriginId: 1, saleStatusId: 2);
+            var fullSale = new Sale(customerId: 5, saleOriginId: 1, saleStatusId: 2, paymentMethod: Domain.ValueObject.Sales.Sale.PaymentMethod.Efectivo);
             EntityReflectionHelper.SetId(fullSale, 100);
             fullSale.AddDetail(new SaleDetail(100, 10, new SaleDetailQuantity(2), new UnitPrice(50m)));
             _saleRepositoryMock.Setup(r => r.GetByIdWithDetailsAsync(100)).ReturnsAsync(fullSale);
@@ -107,6 +107,10 @@ namespace SmartInventory.Tests.Services.Sales
             {
                 CustomerId = 5,
                 Origin = "Manual",
+                PaymentMethod = "Efectivo",
+                DeliveryAddress = "Calle 1 #2-3",
+                ContactPhone = "3001234567",
+                ContactDocument = "1234567890",
                 Items = new List<SaleItemRequest> { new() { ProductId = 10, Quantity = 2 } },
             };
 
@@ -138,6 +142,11 @@ namespace SmartInventory.Tests.Services.Sales
             var request = new CreateSaleRequest
             {
                 CustomerId = 5,
+                Origin = "Manual",
+                PaymentMethod = "Efectivo",
+                DeliveryAddress = "Calle 1 #2-3",
+                ContactPhone = "3001234567",
+                ContactDocument = "1234567890",
                 Items = new List<SaleItemRequest> { new() { ProductId = 99, Quantity = 1 } },
             };
 
@@ -163,6 +172,11 @@ namespace SmartInventory.Tests.Services.Sales
             var request = new CreateSaleRequest
             {
                 CustomerId = 5,
+                Origin = "Manual",
+                PaymentMethod = "Tarjeta",
+                DeliveryAddress = "Calle 1 #2-3",
+                ContactPhone = "3001234567",
+                ContactDocument = "1234567890",
                 Items = new List<SaleItemRequest> { new() { ProductId = 10, Quantity = 5 } },
             };
 
@@ -214,6 +228,11 @@ namespace SmartInventory.Tests.Services.Sales
             var request = new CreateSaleRequest
             {
                 CustomerId = 5,
+                Origin = "Manual",
+                PaymentMethod = "Efectivo",
+                DeliveryAddress = "Calle 1 #2-3",
+                ContactPhone = "3001234567",
+                ContactDocument = "1234567890",
                 Items = new List<SaleItemRequest> { new() { ProductId = 10, Quantity = 2 } },
             };
 
@@ -231,7 +250,7 @@ namespace SmartInventory.Tests.Services.Sales
         public async Task ChangeStatusAsync_SaleExists_UpdatesStatusAndReturnsDto()
         {
             // Arrange
-            var sale = new Sale(customerId: 5, saleOriginId: 1, saleStatusId: 1);
+            var sale = new Sale(customerId: 5, saleOriginId: 1, saleStatusId: 1, paymentMethod: Domain.ValueObject.Sales.Sale.PaymentMethod.Tarjeta);
             EntityReflectionHelper.SetId(sale, 1);
 
             _saleRepositoryMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(sale);

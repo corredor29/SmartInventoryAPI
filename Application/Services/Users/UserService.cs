@@ -20,18 +20,22 @@ namespace Application.Services.Users
 
         public async Task<IReadOnlyList<UserDto>> GetAllAsync()
         {
-            var users = await _unitOfWork.Users.GetAllAsync();
+            var users = await _unitOfWork.Users.GetAllWithRoleAsync();
             return users.Select(ToDto).ToList();
         }
 
         public async Task<UserDto?> GetByIdAsync(int id)
         {
-            var user = await _unitOfWork.Users.GetByIdAsync(id);
+            var user = await _unitOfWork.Users.GetByIdWithRoleAsync(id);
             return user is null ? null : ToDto(user);
         }
 
         public async Task<UserDto> CreateAsync(CreateUserRequest request)
         {
+            var existing = await _unitOfWork.Users.GetByEmailWithRoleAsync(request.Email);
+            if (existing is not null)
+                throw new System.InvalidOperationException("Ya existe un usuario con ese email.");
+
             var hashedPassword = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
             var user = new User(
@@ -45,7 +49,8 @@ namespace Application.Services.Users
             await _unitOfWork.Users.AddAsync(user);
             await _unitOfWork.SaveChangesAsync();
 
-            return ToDto(user);
+            var created = await _unitOfWork.Users.GetByIdWithRoleAsync(user.Id) ?? user;
+            return ToDto(created);
         }
 
         public async Task<UserDto?> UpdateAsync(int id, UpdateUserRequest request)
@@ -53,11 +58,23 @@ namespace Application.Services.Users
             var user = await _unitOfWork.Users.GetByIdAsync(id);
             if (user is null) return null;
 
+            var byEmail = await _unitOfWork.Users.GetByEmailWithRoleAsync(request.Email);
+            if (byEmail is not null && byEmail.Id != id)
+                throw new System.InvalidOperationException("Ya existe un usuario con ese email.");
+
             user.Update(new UserName(request.Name), new Email(request.Email));
+            user.ChangeRole(request.RoleId);
+
+            if (!string.IsNullOrWhiteSpace(request.Password))
+            {
+                user.ChangePassword(new PasswordHash(BCrypt.Net.BCrypt.HashPassword(request.Password)));
+            }
+
             _unitOfWork.Users.Update(user);
             await _unitOfWork.SaveChangesAsync();
 
-            return ToDto(user);
+            var updated = await _unitOfWork.Users.GetByIdWithRoleAsync(id);
+            return updated is null ? null : ToDto(updated);
         }
 
         public async Task<bool> DeleteAsync(int id)
@@ -75,6 +92,7 @@ namespace Application.Services.Users
             UserId = user.Id,
             Name = user.Name.Value,
             Email = user.Email.Value,
+            RoleId = user.RoleId,
             RoleName = user.Role?.Name.Value ?? string.Empty,
             CustomerId = user.CustomerId,
         };

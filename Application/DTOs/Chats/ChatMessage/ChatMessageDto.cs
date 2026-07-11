@@ -6,6 +6,7 @@ namespace Application.DTOs.Chats.ChatMessage
     {
         public int ChatMessageId { get; set; }
         public int ChatSessionId { get; set; }
+        public int SenderTypeId { get; set; }
         public string SenderTypeName { get; set; } = string.Empty;
         public string Content { get; set; } = string.Empty;
         public DateTime SentAt { get; set; }

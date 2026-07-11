@@ -10,6 +10,11 @@ namespace Application.Contracts.Repositories
 
         Task<IReadOnlyList<Product>> SearchAsync(string query);
 
+        /// <summary>
+        /// Busqueda semantica por distancia coseno (pgvector). Requiere embeddings poblados.
+        /// </summary>
+        Task<IReadOnlyList<Product>> SearchByEmbeddingAsync(float[] embedding, int take = 15);
+
         Task<Product?> GetByIdWithInventoryAsync(int productId);
     }
 }

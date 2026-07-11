@@ -9,5 +9,7 @@ namespace Application.Contracts.Services.Invoices
         Task<IReadOnlyList<InvoiceDto>> GetAllAsync();
         Task<InvoiceDto?> GetByIdAsync(int id);
         Task<InvoiceDto?> GetByInvoiceNumberAsync(string invoiceNumber);
+        Task<IReadOnlyList<InvoiceDto>> GetMineAsync(int authenticatedUserId);
+        Task<(byte[] Content, string FileName)?> GeneratePdfAsync(int id);
     }
 }

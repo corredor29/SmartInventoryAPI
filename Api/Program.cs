@@ -2,6 +2,11 @@ using Api.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Asegura wwwroot para servir imágenes subidas (/uploads/products/...)
+var webRootPath = Path.Combine(builder.Environment.ContentRootPath, "wwwroot");
+Directory.CreateDirectory(webRootPath);
+builder.Environment.WebRootPath = webRootPath;
+
 builder.Services.AddOpenApi();
 builder.Services.AddControllersWithUnifiedResponse();
 
@@ -23,6 +28,7 @@ app.UseCustomMiddleware();
 
 app.UseHttpsRedirection();
 app.UseCors("AllowFrontend");
+app.UseStaticFiles();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();

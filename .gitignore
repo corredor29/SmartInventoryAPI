@@ -36,3 +36,4 @@ appsettings.Local.json
 Thumbs.db
 proyecto.md
 .artifacts/
+_jwt_tmp/

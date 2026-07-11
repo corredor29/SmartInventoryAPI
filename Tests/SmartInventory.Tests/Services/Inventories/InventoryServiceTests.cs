@@ -2,7 +2,9 @@ using Application.Contracts.Repositories;
 using Application.DTOs.Inventories.Inventory;
 using Application.Services.Inventories;
 using Domain.Entities.Inventories;
+using Domain.Entities.Products;
 using Domain.ValueObject.Inventories.Inventory;
+using Domain.ValueObject.Products.MovementType;
 using Moq;
 using SmartInventory.Tests.TestHelpers;
 
@@ -13,15 +15,29 @@ namespace SmartInventory.Tests.Services.Inventories
         private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
         private readonly Mock<IInventoryRepository> _inventoryRepositoryMock = new();
         private readonly Mock<IRepository<InventoryMovement>> _inventoryMovementRepositoryMock = new();
+        private readonly Mock<IRepository<MovementType>> _movementTypeRepositoryMock = new();
         private readonly InventoryService _sut;
 
         public InventoryServiceTests()
         {
             _unitOfWorkMock.SetupGet(u => u.Inventory).Returns(_inventoryRepositoryMock.Object);
             _unitOfWorkMock.Setup(u => u.Repository<InventoryMovement>()).Returns(_inventoryMovementRepositoryMock.Object);
+            _unitOfWorkMock.Setup(u => u.Repository<MovementType>()).Returns(_movementTypeRepositoryMock.Object);
             _unitOfWorkMock.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
             _sut = new InventoryService(_unitOfWorkMock.Object);
+        }
+
+        private void SetupMovementTypes()
+        {
+            var entrada = new MovementType(MovementTypeName.Create("Entrada"));
+            EntityReflectionHelper.SetId(entrada, 1);
+            var salida = new MovementType(MovementTypeName.Create("Salida"));
+            EntityReflectionHelper.SetId(salida, 2);
+
+            _movementTypeRepositoryMock
+                .Setup(r => r.GetAllAsync())
+                .ReturnsAsync(new List<MovementType> { entrada, salida });
         }
 
         private static Inventory BuildInventory(int inventoryId, int productId, int stock)
@@ -35,6 +51,7 @@ namespace SmartInventory.Tests.Services.Inventories
         public async Task AdjustStockAsync_PositiveQuantityChange_IncreasesStockAndRecordsMovement()
         {
             // Arrange
+            SetupMovementTypes();
             var inventory = BuildInventory(inventoryId: 50, productId: 1, stock: 10);
             _inventoryRepositoryMock.Setup(r => r.GetByProductIdAsync(1)).ReturnsAsync(inventory);
             _inventoryMovementRepositoryMock.Setup(r => r.AddAsync(It.IsAny<InventoryMovement>())).Returns(Task.CompletedTask);
@@ -57,6 +74,7 @@ namespace SmartInventory.Tests.Services.Inventories
         public async Task AdjustStockAsync_NegativeQuantityChange_DecreasesStockAndRecordsMovement()
         {
             // Arrange
+            SetupMovementTypes();
             var inventory = BuildInventory(inventoryId: 50, productId: 1, stock: 10);
             _inventoryRepositoryMock.Setup(r => r.GetByProductIdAsync(1)).ReturnsAsync(inventory);
             _inventoryMovementRepositoryMock.Setup(r => r.AddAsync(It.IsAny<InventoryMovement>())).Returns(Task.CompletedTask);
@@ -79,6 +97,7 @@ namespace SmartInventory.Tests.Services.Inventories
         public async Task AdjustStockAsync_QuantityExceedsCurrentStock_ThrowsInvalidOperationException()
         {
             // Arrange
+            SetupMovementTypes();
             var inventory = BuildInventory(inventoryId: 50, productId: 1, stock: 3);
             _inventoryRepositoryMock.Setup(r => r.GetByProductIdAsync(1)).ReturnsAsync(inventory);
 
@@ -98,7 +117,7 @@ namespace SmartInventory.Tests.Services.Inventories
             _inventoryRepositoryMock.Setup(r => r.GetByProductIdAsync(99)).ReturnsAsync((Inventory?)null);
 
             // Act
-            var result = await _sut.AdjustStockAsync(99, new UpdateInventoryRequest { QuantityChange = 5 });
+            var result = await _sut.AdjustStockAsync(99, new UpdateInventoryRequest { QuantityChange = 5, Reason = "Test" });
 
             // Assert
             Assert.Null(result);

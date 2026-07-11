@@ -19,6 +19,9 @@ namespace Application.Validators.Products
 
             RuleFor(x => x.Description)
                 .MaximumLength(1000).WithMessage("La descripción no puede exceder 1000 caracteres.");
+
+            RuleFor(x => x.ImageUrl)
+                .MaximumLength(500).WithMessage("La URL de imagen no puede exceder 500 caracteres.");
         }
     }
 }

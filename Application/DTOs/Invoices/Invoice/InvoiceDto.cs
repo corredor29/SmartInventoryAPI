@@ -11,6 +11,10 @@ namespace Application.DTOs.Invoices.Invoice
         public int SaleId { get; set; }
         public string CustomerName { get; set; } = string.Empty;
         public decimal Total { get; set; }
+        public string? PaymentMethod { get; set; }
+        public string? DeliveryAddress { get; set; }
+        public string? ContactPhone { get; set; }
+        public string? ContactDocument { get; set; }
         public List<InvoiceItemDto> Items { get; set; } = new();
     }
 

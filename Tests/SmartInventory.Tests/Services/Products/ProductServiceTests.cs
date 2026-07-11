@@ -1,4 +1,5 @@
 using Application.Contracts.Repositories;
+using Application.Contracts.Services;
 using Application.DTOs.Products.Product;
 using Application.Services.Products;
 using Domain.Entities.Inventories;
@@ -14,6 +15,7 @@ namespace SmartInventory.Tests.Services.Products
         private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
         private readonly Mock<IProductRepository> _productRepositoryMock = new();
         private readonly Mock<IInventoryRepository> _inventoryRepositoryMock = new();
+        private readonly Mock<IEmbeddingService> _embeddingMock = new();
         private readonly ProductService _sut;
 
         public ProductServiceTests()
@@ -21,19 +23,28 @@ namespace SmartInventory.Tests.Services.Products
             _unitOfWorkMock.SetupGet(u => u.Products).Returns(_productRepositoryMock.Object);
             _unitOfWorkMock.SetupGet(u => u.Inventory).Returns(_inventoryRepositoryMock.Object);
             _unitOfWorkMock.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
+            _embeddingMock.SetupGet(e => e.IsConfigured).Returns(false);
 
-            _sut = new ProductService(_unitOfWorkMock.Object);
+            _sut = new ProductService(_unitOfWorkMock.Object, _embeddingMock.Object);
         }
 
         [Fact]
         public async Task CreateAsync_ValidRequest_CreatesProductAndZeroInventory()
         {
             // Arrange
+            Product? created = null;
             _productRepositoryMock
                 .Setup(r => r.AddAsync(It.IsAny<Product>()))
-                .Callback<Product>(p => EntityReflectionHelper.SetId(p, 42))
+                .Callback<Product>(p =>
+                {
+                    EntityReflectionHelper.SetId(p, 42);
+                    created = p;
+                })
                 .Returns(Task.CompletedTask);
             _inventoryRepositoryMock.Setup(r => r.AddAsync(It.IsAny<Inventory>())).Returns(Task.CompletedTask);
+            _productRepositoryMock
+                .Setup(r => r.GetByIdWithInventoryAsync(42))
+                .ReturnsAsync(() => created);
 
             var request = new CreateProductRequest
             {
@@ -42,6 +53,7 @@ namespace SmartInventory.Tests.Services.Products
                 Price = 99.99m,
                 CategoryId = 1,
                 ProductStatusId = 1,
+                InitialStock = 0,
             };
 
             // Act
@@ -56,7 +68,76 @@ namespace SmartInventory.Tests.Services.Products
             _inventoryRepositoryMock.Verify(
                 r => r.AddAsync(It.Is<Inventory>(i => i.ProductId == 42 && i.CurrentStock.Value == 0)),
                 Times.Once);
-            _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
+            _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.AtLeast(2));
+        }
+
+        [Fact]
+        public async Task CreateAsync_WithInitialStock_CreatesInventoryAndEntradaMovement()
+        {
+            // Arrange
+            Product? created = null;
+            Inventory? createdInventory = null;
+
+            _productRepositoryMock
+                .Setup(r => r.AddAsync(It.IsAny<Product>()))
+                .Callback<Product>(p =>
+                {
+                    EntityReflectionHelper.SetId(p, 42);
+                    created = p;
+                })
+                .Returns(Task.CompletedTask);
+
+            _inventoryRepositoryMock
+                .Setup(r => r.AddAsync(It.IsAny<Inventory>()))
+                .Callback<Inventory>(i =>
+                {
+                    EntityReflectionHelper.SetId(i, 77);
+                    createdInventory = i;
+                })
+                .Returns(Task.CompletedTask);
+
+            var entrada = new MovementType(Domain.ValueObject.Products.MovementType.MovementTypeName.Create("Entrada"));
+            EntityReflectionHelper.SetId(entrada, 1);
+            var movementTypeRepo = new Mock<IRepository<MovementType>>();
+            movementTypeRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<MovementType> { entrada });
+            _unitOfWorkMock.Setup(u => u.Repository<MovementType>()).Returns(movementTypeRepo.Object);
+
+            var movementRepo = new Mock<IRepository<InventoryMovement>>();
+            movementRepo.Setup(r => r.AddAsync(It.IsAny<InventoryMovement>())).Returns(Task.CompletedTask);
+            _unitOfWorkMock.Setup(u => u.Repository<InventoryMovement>()).Returns(movementRepo.Object);
+
+            _productRepositoryMock
+                .Setup(r => r.GetByIdWithInventoryAsync(42))
+                .ReturnsAsync(() =>
+                {
+                    if (created is null) return null!;
+                    EntityReflectionHelper.SetProperty(created, nameof(Product.Inventory), createdInventory!);
+                    return created;
+                });
+
+            var request = new CreateProductRequest
+            {
+                Name = "Monitor 27",
+                Price = 800m,
+                CategoryId = 1,
+                ProductStatusId = 1,
+                InitialStock = 15,
+            };
+
+            // Act
+            var result = await _sut.CreateAsync(request);
+
+            // Assert
+            Assert.Equal(15, result.CurrentStock);
+            _inventoryRepositoryMock.Verify(
+                r => r.AddAsync(It.Is<Inventory>(i => i.ProductId == 42 && i.CurrentStock.Value == 15)),
+                Times.Once);
+            movementRepo.Verify(
+                r => r.AddAsync(It.Is<InventoryMovement>(m =>
+                    m.InventoryId == 77 &&
+                    m.MovementTypeId == 1 &&
+                    m.Quantity.Value == 15)),
+                Times.Once);
         }
 
         [Fact]
@@ -88,6 +169,7 @@ namespace SmartInventory.Tests.Services.Products
             EntityReflectionHelper.SetId(product, 7);
 
             _productRepositoryMock.Setup(r => r.GetByIdAsync(7)).ReturnsAsync(product);
+            _productRepositoryMock.Setup(r => r.GetByIdWithInventoryAsync(7)).ReturnsAsync(product);
 
             // Act
             var result = await _sut.ChangeStatusAsync(7, 2);

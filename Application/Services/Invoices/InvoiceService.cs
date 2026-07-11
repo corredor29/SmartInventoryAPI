@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -43,6 +44,37 @@ namespace Application.Services.Invoices
             return invoice is null ? null : await BuildDtoAsync(invoice);
         }
 
+        public async Task<IReadOnlyList<InvoiceDto>> GetMineAsync(int authenticatedUserId)
+        {
+            var user = await _unitOfWork.Users.GetByIdAsync(authenticatedUserId);
+            if (user is null)
+                return Array.Empty<InvoiceDto>();
+
+            var existingByEmail = await _unitOfWork.Customers.GetByEmailAsync(user.Email.Value);
+            int? customerId = existingByEmail?.Id ?? user.CustomerId;
+
+            if (existingByEmail is not null && user.CustomerId != existingByEmail.Id)
+            {
+                user.LinkCustomer(existingByEmail.Id);
+                _unitOfWork.Users.Update(user);
+                await _unitOfWork.SaveChangesAsync();
+            }
+
+            if (!customerId.HasValue)
+                return Array.Empty<InvoiceDto>();
+
+            var invoices = await _unitOfWork.Invoices.GetByCustomerIdAsync(customerId.Value);
+            var result = new List<InvoiceDto>();
+
+            foreach (var invoice in invoices)
+            {
+                var dto = await BuildDtoAsync(invoice);
+                if (dto != null) result.Add(dto);
+            }
+
+            return result;
+        }
+
         private async Task<InvoiceDto?> BuildDtoAsync(Invoice invoice)
         {
             var sale = await _unitOfWork.Sales.GetByIdWithDetailsAsync(invoice.SaleId);
@@ -56,6 +88,10 @@ namespace Application.Services.Invoices
                 SaleId = invoice.SaleId,
                 CustomerName = sale.Customer?.Name.Value ?? string.Empty,
                 Total = sale.GetTotal(),
+                PaymentMethod = sale.PaymentMethod?.Value,
+                DeliveryAddress = sale.DeliveryAddress,
+                ContactPhone = sale.ContactPhone,
+                ContactDocument = sale.ContactDocument,
                 Items = sale.Details.Select(d => new InvoiceItemDto
                 {
                     ProductName = d.Product?.Name.Value ?? string.Empty,
@@ -64,6 +100,16 @@ namespace Application.Services.Invoices
                     Subtotal = d.GetSubtotal(),
                 }).ToList(),
             };
+        }
+
+        public async Task<(byte[] Content, string FileName)?> GeneratePdfAsync(int id)
+        {
+            var dto = await GetByIdAsync(id);
+            if (dto is null) return null;
+
+            var bytes = InvoicePdfGenerator.Generate(dto);
+            var safeName = dto.InvoiceNumber.Replace('/', '-');
+            return (bytes, $"{safeName}.pdf");
         }
     }
 }

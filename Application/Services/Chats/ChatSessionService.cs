@@ -59,6 +59,18 @@ namespace Application.Services.Chats
             return await GetByIdAsync(id);
         }
 
+        public async Task<ChatSessionDto?> LinkCustomerAsync(int sessionId, int customerId)
+        {
+            var session = await _unitOfWork.ChatSessions.GetByIdAsync(sessionId);
+            if (session is null) return null;
+
+            session.LinkCustomer(customerId);
+            _unitOfWork.ChatSessions.Update(session);
+            await _unitOfWork.SaveChangesAsync();
+
+            return await GetByIdAsync(sessionId);
+        }
+
         private static ChatSessionDto ToDto(ChatSession session) => new()
         {
             ChatSessionId = session.Id,

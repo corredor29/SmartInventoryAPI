@@ -180,6 +180,13 @@ Usuario administrador sembrado (**solo para desarrollo, cambiar en producción**
 - Email: `admin@smartinventory.com`
 - Password: `Admin123!`
 
+Usuarios asesor sembrados:
+
+| Nombre | Email | Password |
+|---|---|---|
+| Danny Velasco | `danny.velasco@smartinventory.com` | `Asesor123!` |
+| Andres Navas | `andres.navas@smartinventory.com` | `Asesor123!` |
+
 El seeder es idempotente: cada sección verifica si ya existen registros antes de insertar, así que es seguro reiniciar la API varias veces sin duplicar datos.
 
 ## Correr el proyecto
@@ -253,11 +260,12 @@ Auth requerido = necesita header `Authorization: Bearer {token}` válido. "Roles
 |---|---|---|---|
 | GET | `/api/products` | Lista todos los productos | Anónimo |
 | GET | `/api/products/{id}` | Detalle de un producto | Anónimo |
-| GET | `/api/products/search?q=` | Búsqueda de productos (usada por el chatbot) | Anónimo (rate limit `chatbot`) |
-| POST | `/api/products` | Crear producto | Administrador |
+| GET | `/api/products/search?q=` | Búsqueda semántica (pgvector) con fallback por texto | Anónimo (rate limit `chatbot`) |
+| POST | `/api/products` | Crear producto (genera embedding si hay API key) | Administrador |
 | PUT | `/api/products/{id}` | Actualizar producto | Administrador |
 | PATCH | `/api/products/{id}/status` | Cambiar estado del producto | Administrador |
 | DELETE | `/api/products/{id}` | Eliminar producto | Administrador |
+| POST | `/api/products/reindex-embeddings` | Regenera embeddings de todos los productos | Administrador |
 
 ### Categories (`/api/categories`) y Product Statuses (`/api/product-statuses`)
 
@@ -347,9 +355,20 @@ El seeder define tres roles: **Administrador**, **Asesor** y **Cliente**. A part
 
 ## Integración con otros servicios
 
-- **Chatbot (FastAPI externo)**: `POST /api/chat/message` guarda el mensaje del cliente, lo reenvía al servicio externo configurado en `Chatbot:BaseUrl` (`FastApiChatbotClient`, que hace `POST {BaseUrl}/chat/message`), y persiste la respuesta del bot. La URL por defecto es `http://localhost:8000`.
-- **SignalR**: el hub `ChatHub` se expone en `/hubs/chat`. Los asesores se unen al grupo `Advisors` (`JoinAsAdvisor`) para recibir en tiempo real nuevos escalamientos (`NewEscalation`) y notificaciones manuales (`AdvisorNotification`); también soporta unirse a una sesión de chat puntual (`JoinSession` / `SendMessageToSession` / `ReceiveMessage`). La autenticación JWT del hub acepta el token como query string `access_token` (necesario porque los clientes de SignalR no siempre pueden mandar headers).
+- **Chatbot (FastAPI externo)**: `POST /api/chat/message` guarda el mensaje del cliente, lo reenvía al servicio externo configurado en `Chatbot:BaseUrl` (`FastApiChatbotClient`, que hace `POST {BaseUrl}/chat/message`), y persiste la respuesta del bot. La URL por defecto es `http://localhost:8000`. Si el bot no responde (timeout / caída), el API devuelve un mensaje amigable con `state: ERROR` en lugar de fallar en 500. Cuando el bot responde `WAITING_HUMAN_AGENT`, el API crea (o reutiliza) la escalación y notifica a asesores por SignalR. Alias Python: `POST /api/chat/escalate`.
+- **SignalR**: el hub `ChatHub` se expone en `/hubs/chat` con `[AllowAnonymous]` para que clientes sin login (FAB / chatbot) puedan `JoinSession` tras una escalación. Los asesores se unen al grupo `Advisors` (`JoinAsAdvisor`) para `NewEscalation` / `AdvisorNotification`. JWT opcional vía query `access_token`.
 - **Frontend (React)**: consumido vía HTTP/JSON y SignalR. El origen permitido por CORS se configura con `Frontend:Url` (política `AllowFrontend`, con `AllowCredentials`), con valor por defecto `http://localhost:5173` si la clave no está configurada.
+
+### Arranque local del stack (3 apps + DB)
+
+| Proceso | Puerto | Cómo |
+|---|---|---|
+| PostgreSQL | `5433` | `docker compose up -d` en este repo |
+| API .NET | `5299` | `cd Api && dotnet run` |
+| Chatbot Python | `8000` | repo `smartinventory-chatbot` → `uvicorn app.main:app --port 8000` |
+| Frontend | `5173` | repo `smartinventory-frontend` → `npm run dev` |
+
+Config chatbot: `Chatbot:BaseUrl=http://localhost:8000`, `Chatbot:TimeoutSeconds=60`. En Python: `DOTNET_API_BASE_URL=http://localhost:5299/api`.
 
 ## Variables de entorno / configuración completa
 
@@ -361,6 +380,9 @@ El seeder define tres roles: **Administrador**, **Asesor** y **Cliente**. A part
 | `Jwt:Audience` | Audiencia esperada del token | Opcional, default `SmartInventoryClient` |
 | `Jwt:ExpiryMinutes` | Minutos de validez del token, usada por `TokenService` al generar el JWT | Opcional, default `120` (parseada como texto en `TokenService.GenerateToken`) |
 | `Chatbot:BaseUrl` | URL base del servicio FastAPI del chatbot | Opcional, default `http://localhost:8000` |
+| `Chatbot:TimeoutSeconds` | Timeout de la llamada HTTP al chatbot | Opcional, default `60` |
+| `OpenAI:ApiKey` / `OPENAI_API_KEY` | API key para embeddings (búsqueda semántica pgvector) | Opcional — sin key, `GET /api/products/search` usa fallback por texto |
+| `OpenAI:EmbeddingModel` | Modelo de embeddings | Opcional, default `text-embedding-3-small` (vector 1536) |
 | `Frontend:Url` | Origen permitido por CORS para el frontend | Opcional, default `http://localhost:5173` (no está definida en ningún `appsettings*.json` del repo) |
 | `RateLimiting:Global:PermitLimit` / `WindowMinutes` | Límite global de requests por IP | Opcional, default 100 / 1 min |
 | `RateLimiting:Auth:PermitLimit` / `WindowMinutes` | Límite específico para `/api/auth/login` | Opcional, default 5 / 1 min |
@@ -370,6 +392,7 @@ El seeder define tres roles: **Administrador**, **Asesor** y **Cliente**. A part
 
 - **Error de conexión a PostgreSQL al arrancar la API**: verifica que el contenedor esté corriendo con `docker ps` (debe aparecer `smartinventory-db`) y que `ConnectionStrings:DefaultConnection` use el puerto `5433` (no el `5432` por defecto de Postgres), tal como está mapeado en `docker-compose.yml`.
 - **`la extensión "vector" no está disponible` / error de pgvector**: asegúrate de estar usando la imagen `pgvector/pgvector:pg17` definida en `docker-compose.yml`, no una imagen `postgres` estándar. Si ya tenías un volumen creado con otra imagen, elimínalo (`docker compose down -v`) y vuelve a levantar el contenedor para que se reinicialice con la extensión disponible.
+- **Búsqueda semántica sin resultados / solo texto**: configura `OpenAI:ApiKey` (o `OPENAI_API_KEY`), reinicia la API y llama `POST /api/products/reindex-embeddings` con un JWT de Administrador para poblar la columna `embedding`. Sin key, el search sigue funcionando con tokens de texto.
 - **Conflicto de puertos con un PostgreSQL nativo**: el contenedor usa el puerto `5433` del host precisamente para evitar chocar con una instancia local de PostgreSQL en el `5432` por defecto. Si aun así `5433` está ocupado, cambia el mapeo de puertos en `docker-compose.yml` y actualiza `ConnectionStrings:DefaultConnection` en consecuencia.
 - **`401 Unauthorized` en endpoints protegidos**: confirma que el header sea `Authorization: Bearer {token}` (con el prefijo `Bearer` y un espacio), que el token no haya expirado, y que `Jwt:Secret`/`Issuer`/`Audience` sean los mismos con los que se generó el token (si cambiaste el secreto entre reinicios, los tokens emitidos antes dejan de ser válidos).
 - **`dotnet ef` no reconocido**: instala la herramienta global con `dotnet tool install --global dotnet-ef` y asegúrate de que la carpeta de herramientas de .NET esté en tu `PATH`.

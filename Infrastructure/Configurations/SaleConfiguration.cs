@@ -22,6 +22,32 @@ namespace Infrastructure.Persistence.Configurations
             builder.Property(s => s.SaleOriginId).HasColumnName("sale_origin_id");
             builder.Property(s => s.SaleStatusId).HasColumnName("sale_status_id");
 
+            builder.Property(s => s.PaymentMethod)
+                .HasColumnName("payment_method")
+                .HasMaxLength(50)
+                .IsRequired()
+                .HasConversion(v => v.Value, v => PaymentMethod.Create(v));
+
+            builder.Property(s => s.DeliveryAddress)
+                .HasColumnName("delivery_address")
+                .HasMaxLength(500);
+
+            builder.Property(s => s.DeliveryLat)
+                .HasColumnName("delivery_lat")
+                .HasColumnType("numeric(10,7)");
+
+            builder.Property(s => s.DeliveryLng)
+                .HasColumnName("delivery_lng")
+                .HasColumnType("numeric(10,7)");
+
+            builder.Property(s => s.ContactPhone)
+                .HasColumnName("contact_phone")
+                .HasMaxLength(30);
+
+            builder.Property(s => s.ContactDocument)
+                .HasColumnName("contact_document")
+                .HasMaxLength(50);
+
             // Backing field: la colección privada _details se mapea igual a través de la propiedad Details
             builder.Metadata.FindNavigation(nameof(Sale.Details))!
                 .SetPropertyAccessMode(PropertyAccessMode.Field);

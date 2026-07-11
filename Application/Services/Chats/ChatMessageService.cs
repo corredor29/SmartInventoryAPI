@@ -25,11 +25,19 @@ namespace Application.Services.Chats
             if (session is null)
                 return new List<ChatMessageDto>();
 
-            return session.Messages.Select(ToDto).ToList();
+            return session.Messages
+                .OrderBy(m => m.SentAt.Value)
+                .ThenBy(m => m.Id)
+                .Select(ToDto)
+                .ToList();
         }
 
         public async Task<ChatMessageDto> CreateAsync(CreateChatMessageRequest request)
         {
+            var senderType = await _unitOfWork.Repository<SenderType>().GetByIdAsync(request.SenderTypeId);
+            if (senderType is null)
+                throw new System.InvalidOperationException($"SenderType {request.SenderTypeId} no existe.");
+
             var message = new ChatMessage(
                 request.ChatSessionId,
                 request.SenderTypeId,
@@ -39,16 +47,40 @@ namespace Application.Services.Chats
             await _unitOfWork.Repository<ChatMessage>().AddAsync(message);
             await _unitOfWork.SaveChangesAsync();
 
-            return ToDto(message);
+            return new ChatMessageDto
+            {
+                ChatMessageId = message.Id,
+                ChatSessionId = message.ChatSessionId,
+                SenderTypeId = message.SenderTypeId,
+                SenderTypeName = senderType.Name.Value,
+                Content = message.Content.Value,
+                SentAt = message.SentAt.Value,
+            };
         }
 
-        private static ChatMessageDto ToDto(ChatMessage message) => new()
+        private static ChatMessageDto ToDto(ChatMessage message)
         {
-            ChatMessageId = message.Id,
-            ChatSessionId = message.ChatSessionId,
-            SenderTypeName = message.SenderType?.Name.Value ?? string.Empty,
-            Content = message.Content.Value,
-            SentAt = message.SentAt.Value,
-        };
+            var name = message.SenderType?.Name.Value;
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                name = message.SenderTypeId switch
+                {
+                    1 => "Bot",
+                    2 => "Cliente",
+                    3 => "Asesor",
+                    _ => "Desconocido",
+                };
+            }
+
+            return new ChatMessageDto
+            {
+                ChatMessageId = message.Id,
+                ChatSessionId = message.ChatSessionId,
+                SenderTypeId = message.SenderTypeId,
+                SenderTypeName = name,
+                Content = message.Content.Value,
+                SentAt = message.SentAt.Value,
+            };
+        }
     }
 }

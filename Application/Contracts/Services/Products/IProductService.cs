@@ -13,5 +13,10 @@ namespace Application.Contracts.Services.Products
         Task<ProductDto?> UpdateAsync(int id, UpdateProductRequest request);
         Task<ProductDto?> ChangeStatusAsync(int id, int productStatusId);
         Task<bool> DeleteAsync(int id);
+
+        /// <summary>
+        /// Regenera embeddings de todos los productos (admin). Devuelve cuantos se actualizaron.
+        /// </summary>
+        Task<int> ReindexEmbeddingsAsync();
     }
 }
