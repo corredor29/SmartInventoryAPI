@@ -11,27 +11,31 @@ using Application.DTOs.Chats.Chat;
 
 namespace Infrastructure.ExternalServices
 {
-    public class FastApiChatbotClient : IChatbotClient
+    /// <summary>
+    /// Cliente HTTP hacia el chatbot externo (n8n local o FastAPI legacy).
+    /// React nunca habla con este servicio: solo .NET.
+    /// </summary>
+    public class ChatbotHttpClient : IChatbotClient
     {
-        private static readonly JsonSerializerOptions JsonOptions = new()
-        {
-            PropertyNameCaseInsensitive = true,
-        };
-
         private readonly HttpClient _httpClient;
-        private readonly ILogger<FastApiChatbotClient> _logger;
+        private readonly ILogger<ChatbotHttpClient> _logger;
         private readonly TimeSpan _timeout;
+        private readonly string _messagePath;
 
-        public FastApiChatbotClient(
+        public ChatbotHttpClient(
             HttpClient httpClient,
             IConfiguration configuration,
-            ILogger<FastApiChatbotClient> logger)
+            ILogger<ChatbotHttpClient> logger)
         {
             _httpClient = httpClient;
             _logger = logger;
-            _httpClient.BaseAddress = new Uri(configuration["Chatbot:BaseUrl"] ?? "http://localhost:8000");
+            _httpClient.BaseAddress = new Uri(
+                configuration["Chatbot:BaseUrl"] ?? "http://localhost:5678");
 
-            var timeoutSeconds = 60;
+            var path = configuration["Chatbot:MessagePath"] ?? "/webhook/chat-message";
+            _messagePath = path.StartsWith('/') ? path : "/" + path;
+
+            var timeoutSeconds = 90;
             if (int.TryParse(configuration["Chatbot:TimeoutSeconds"], out var configured) && configured > 0)
                 timeoutSeconds = configured;
             _timeout = TimeSpan.FromSeconds(timeoutSeconds);
@@ -49,31 +53,51 @@ namespace Infrastructure.ExternalServices
                     Encoding.UTF8,
                     "application/json");
 
-                var response = await _httpClient.PostAsync("/chat/message", content, cts.Token);
+                var response = await _httpClient.PostAsync(_messagePath, content, cts.Token);
 
                 if (!response.IsSuccessStatusCode)
                 {
                     var body = await response.Content.ReadAsStringAsync(cts.Token);
                     _logger.LogWarning(
-                        "Chatbot HTTP {StatusCode}: {Body}",
+                        "Chatbot HTTP {StatusCode} en {Path}: {Body}",
                         (int)response.StatusCode,
+                        _messagePath,
                         body);
 
                     return new ChatBotResponseDto
                     {
-                        Response = "El asistente no está disponible en este momento. Intenta de nuevo en unos minutos.",
+                        Response = "El asistente no esta disponible en este momento. Intenta de nuevo en unos minutos.",
                         State = "ERROR",
                     };
                 }
 
                 var json = await response.Content.ReadAsStringAsync(cts.Token);
-                using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(json) ? "{}" : json);
-                var root = doc.RootElement;
+                if (string.IsNullOrWhiteSpace(json))
+                {
+                    _logger.LogWarning("Chatbot devolvio cuerpo vacio en {Path}", _messagePath);
+                    return new ChatBotResponseDto
+                    {
+                        Response = "El asistente no devolvio una respuesta. Revisa que el workflow de n8n este activo.",
+                        State = "ERROR",
+                    };
+                }
+
+                using var doc = JsonDocument.Parse(json);
+                var root = UnwrapRoot(doc.RootElement);
+
+                var responseText = ReadString(root, "response", "Response");
+                if (string.IsNullOrWhiteSpace(responseText)
+                    || responseText.Contains("max iterations", StringComparison.OrdinalIgnoreCase)
+                    || responseText.Contains("Sin respuesta del bot", StringComparison.OrdinalIgnoreCase))
+                {
+                    responseText =
+                        "Estoy teniendo un problema tecnico momentaneo. " +
+                        "Intenta de nuevo o reformula tu busqueda (ej. lenovo, laptop).";
+                }
 
                 return new ChatBotResponseDto
                 {
-                    Response = ReadString(root, "response", "Response")
-                               ?? "Sin respuesta del bot.",
+                    Response = responseText,
                     State = ReadString(root, "state", "State") ?? "IN_PROGRESS",
                     InvoiceNumber = ReadString(root, "invoice_number", "invoiceNumber", "InvoiceNumber"),
                     SaleOrigin = ReadString(root, "sale_origin", "saleOrigin", "SaleOrigin"),
@@ -85,16 +109,17 @@ namespace Infrastructure.ExternalServices
                 _logger.LogWarning("Timeout esperando respuesta del chatbot (session {SessionId})", sessionId);
                 return new ChatBotResponseDto
                 {
-                    Response = "El asistente tardó demasiado en responder. Intenta de nuevo en unos momentos.",
+                    Response = "El asistente tardo demasiado en responder. Intenta de nuevo en unos momentos.",
                     State = "ERROR",
                 };
             }
             catch (HttpRequestException ex)
             {
-                _logger.LogError(ex, "No se pudo conectar con el chatbot en {BaseAddress}", _httpClient.BaseAddress);
+                _logger.LogError(ex, "No se pudo conectar con el chatbot en {BaseAddress}{Path}",
+                    _httpClient.BaseAddress, _messagePath);
                 return new ChatBotResponseDto
                 {
-                    Response = "No se pudo conectar con el asistente. Verifica que el servicio del chatbot esté en ejecución.",
+                    Response = "No se pudo conectar con el asistente. Verifica que n8n este en ejecucion (Node).",
                     State = "ERROR",
                 };
             }
@@ -103,10 +128,40 @@ namespace Infrastructure.ExternalServices
                 _logger.LogError(ex, "Error inesperado al llamar al chatbot");
                 return new ChatBotResponseDto
                 {
-                    Response = "Ocurrió un error al procesar tu mensaje. Intenta de nuevo.",
+                    Response = "Ocurrio un error al procesar tu mensaje. Intenta de nuevo.",
                     State = "ERROR",
                 };
             }
+        }
+
+        private static JsonElement UnwrapRoot(JsonElement root)
+        {
+            if (root.ValueKind != JsonValueKind.Object) return root;
+            if (TryGetPropertyIgnoreCase(root, "response", out _)) return root;
+
+            foreach (var wrapper in new[] { "body", "data", "json" })
+            {
+                if (!TryGetPropertyIgnoreCase(root, wrapper, out var inner)) continue;
+
+                if (inner.ValueKind == JsonValueKind.Object
+                    && TryGetPropertyIgnoreCase(inner, "response", out _))
+                    return inner;
+
+                if (inner.ValueKind == JsonValueKind.String)
+                {
+                    try
+                    {
+                        using var nested = JsonDocument.Parse(inner.GetString() ?? "{}");
+                        if (TryGetPropertyIgnoreCase(nested.RootElement, "response", out _))
+                            return nested.RootElement.Clone();
+                    }
+                    catch (JsonException)
+                    {
+                    }
+                }
+            }
+
+            return root;
         }
 
         private static string? ReadString(JsonElement root, params string[] names)
@@ -117,7 +172,6 @@ namespace Infrastructure.ExternalServices
                     return prop.GetString();
             }
 
-            // Case-insensitive fallback
             foreach (var prop in root.EnumerateObject())
             {
                 foreach (var name in names)
@@ -131,9 +185,9 @@ namespace Infrastructure.ExternalServices
             return null;
         }
 
-        private static System.Collections.Generic.List<Application.DTOs.Chats.Chat.ChatBotProductDto> ReadProducts(JsonElement root)
+        private static System.Collections.Generic.List<ChatBotProductDto> ReadProducts(JsonElement root)
         {
-            var list = new System.Collections.Generic.List<Application.DTOs.Chats.Chat.ChatBotProductDto>();
+            var list = new System.Collections.Generic.List<ChatBotProductDto>();
             if (!TryGetPropertyIgnoreCase(root, "products", out var productsEl)
                 || productsEl.ValueKind != JsonValueKind.Array)
                 return list;
@@ -144,7 +198,7 @@ namespace Infrastructure.ExternalServices
                 var id = ReadInt(item, "product_id", "productId", "ProductId");
                 if (id is null or <= 0) continue;
 
-                list.Add(new Application.DTOs.Chats.Chat.ChatBotProductDto
+                list.Add(new ChatBotProductDto
                 {
                     ProductId = id.Value,
                     Name = ReadString(item, "name", "Name") ?? string.Empty,

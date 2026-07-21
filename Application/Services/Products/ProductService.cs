@@ -39,7 +39,12 @@ namespace Application.Services.Products
 
         public async Task<IReadOnlyList<ProductDto>> SearchAsync(string query)
         {
-            // 1) Busqueda semantica con pgvector si hay embeddings + API key
+            // 1) Lexical first — precise for named models (e.g. "lenovo legion 5")
+            var products = await _unitOfWork.Products.SearchAsync(query);
+            if (products.Count > 0)
+                return products.Select(ToDto).ToList();
+
+            // 2) Fallback: semantic with pgvector only when lexical is empty
             if (_embeddingService.IsConfigured)
             {
                 var embedding = await _embeddingService.CreateEmbeddingAsync(query);
@@ -51,9 +56,7 @@ namespace Application.Services.Products
                 }
             }
 
-            // 2) Fallback: busqueda por tokens de texto
-            var products = await _unitOfWork.Products.SearchAsync(query);
-            return products.Select(ToDto).ToList();
+            return Array.Empty<ProductDto>();
         }
 
         public async Task<ProductDto> CreateAsync(CreateProductRequest request)

@@ -57,7 +57,7 @@ namespace Api.Extensions
             services.AddScoped<ITokenService, TokenService>();
             services.AddScoped<IAuthService, AuthService>();
 
-            services.AddHttpClient<IChatbotClient, FastApiChatbotClient>(client =>
+            services.AddHttpClient<IChatbotClient, ChatbotHttpClient>(client =>
             {
                 client.Timeout = TimeSpan.FromSeconds(90);
             });

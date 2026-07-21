@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -37,7 +37,7 @@ namespace Infrastructure.Repositories
         public async Task<IReadOnlyList<Product>> SearchAsync(string query)
         {
             // Value objects no se traducen bien con ILike en SQL: filtramos en memoria.
-            // Ademas tokenizamos para que "me gustan los lenovos" encuentre "lenovo LOQ".
+            // Ranking + precision ladder para que "lenovo legion 5" no devuelva otros Lenovos.
             var tokens = Tokenize(query);
             if (tokens.Count == 0)
                 return Array.Empty<Product>();
@@ -48,8 +48,45 @@ namespace Infrastructure.Repositories
                 .Include(p => p.Inventory)
                 .ToListAsync();
 
-            return products
-                .Where(p => MatchesAnyToken(p, tokens))
+            var scored = products
+                .Select(p => (Product: p, Score: ScoreMatch(p, tokens, query)))
+                .Where(x => x.Score > 0)
+                .ToList();
+
+            // 1) Todos los tokens en el nombre → solo esos
+            var nameHits = scored
+                .Where(x => MatchesAllTokensIn(x.Product.Name.Value, tokens))
+                .OrderByDescending(x => x.Score)
+                .Select(x => x.Product)
+                .ToList();
+
+            if (nameHits.Count > 0)
+                return nameHits;
+
+            // 2) Query multi-token: todos en name+description+category
+            if (tokens.Count >= 2)
+            {
+                var broadHits = scored
+                    .Where(x =>
+                    {
+                        var name = x.Product.Name.Value;
+                        var description = x.Product.Description?.Value ?? string.Empty;
+                        var category = x.Product.Category?.Name.Value ?? string.Empty;
+                        return MatchesAllTokensIn($"{name} {description} {category}", tokens);
+                    })
+                    .OrderByDescending(x => x.Score)
+                    .Select(x => x.Product)
+                    .ToList();
+
+                if (broadHits.Count > 0)
+                    return broadHits;
+            }
+
+            // 3) Cualquier token, ordenados por score, max 8
+            return scored
+                .OrderByDescending(x => x.Score)
+                .Take(8)
+                .Select(x => x.Product)
                 .ToList();
         }
 
@@ -82,7 +119,7 @@ namespace Infrastructure.Repositories
         private static List<string> Tokenize(string query)
         {
             var raw = Regex.Split(query.Trim().ToLowerInvariant(), @"[^a-z0-9áéíóúüñ]+")
-                .Where(t => t.Length >= 2 && !StopWords.Contains(t))
+                .Where(KeepToken)
                 .ToList();
 
             var tokens = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -99,15 +136,63 @@ namespace Infrastructure.Repositories
             return tokens.ToList();
         }
 
-        private static bool MatchesAnyToken(Product product, IReadOnlyList<string> tokens)
+        private static bool KeepToken(string t)
+        {
+            if (string.IsNullOrEmpty(t) || StopWords.Contains(t))
+                return false;
+
+            // Length >= 2, pure digits (e.g. "5"), or short model codes (e.g. "m2")
+            if (t.Length >= 2)
+                return true;
+            if (Regex.IsMatch(t, @"^\d+$"))
+                return true;
+            if (Regex.IsMatch(t, @"^[a-záéíóúüñ]+\d+$", RegexOptions.IgnoreCase))
+                return true;
+
+            return false;
+        }
+
+        private static bool MatchesAllTokensIn(string haystack, IReadOnlyList<string> tokens)
+        {
+            if (string.IsNullOrEmpty(haystack) || tokens.Count == 0)
+                return false;
+
+            return tokens.All(token =>
+                haystack.Contains(token, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static int ScoreMatch(Product product, IReadOnlyList<string> tokens, string query)
         {
             var name = product.Name.Value;
             var description = product.Description?.Value ?? string.Empty;
             var category = product.Category?.Name.Value ?? string.Empty;
-            var haystack = $"{name} {description} {category}";
+            var descAndCategory = $"{description} {category}";
 
-            return tokens.Any(token =>
-                haystack.Contains(token, StringComparison.OrdinalIgnoreCase));
+            var score = 0;
+            var normalizedName = CollapseSpaces(name.ToLowerInvariant());
+            var normalizedQuery = CollapseSpaces(query.Trim().ToLowerInvariant());
+
+            if (!string.IsNullOrEmpty(normalizedQuery) &&
+                normalizedName.Contains(normalizedQuery, StringComparison.Ordinal))
+            {
+                score += 50;
+            }
+
+            foreach (var token in tokens)
+            {
+                if (name.Contains(token, StringComparison.OrdinalIgnoreCase))
+                    score += 20;
+                else if (descAndCategory.Contains(token, StringComparison.OrdinalIgnoreCase))
+                    score += 5;
+            }
+
+            if (MatchesAllTokensIn(name, tokens))
+                score += 10;
+
+            return score;
         }
+
+        private static string CollapseSpaces(string value) =>
+            Regex.Replace(value, @"\s+", " ").Trim();
     }
 }
