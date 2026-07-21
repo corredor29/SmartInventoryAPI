@@ -72,11 +72,12 @@ namespace Application.Services.Products
         /// </remarks>
         public async Task<IReadOnlyList<ProductDto>> SearchAsync(string query)
         {
-            // ==============================================================================
-            // ESTRATEGIA 1: BÚSQUEDA SEMÁNTICA CON PGVECTOR
-            // ==============================================================================
-            // Si está configurado el servicio de embeddings (hay API key de OpenAI),
-            // intenta búsqueda semántica que es más precisa y entiende el contexto.
+            // 1) Lexical first — precise for named models (e.g. "lenovo legion 5")
+            var products = await _unitOfWork.Products.SearchAsync(query);
+            if (products.Count > 0)
+                return products.Select(ToDto).ToList();
+
+            // 2) Fallback: semantic with pgvector only when lexical is empty
             if (_embeddingService.IsConfigured)
             {
                 // Genera un embedding vectorial del query usando OpenAI
@@ -90,13 +91,7 @@ namespace Application.Services.Products
                 }
             }
 
-            // ==============================================================================
-            // ESTRATEGIA 2: FALLBACK A BÚSQUEDA POR TEXTO
-            // ==============================================================================
-            // Si no hay API key o la búsqueda semántica no dio resultados,
-            // usa búsqueda por tokens de texto (LIKE SQL) como fallback.
-            var products = await _unitOfWork.Products.SearchAsync(query);
-            return products.Select(ToDto).ToList();
+            return Array.Empty<ProductDto>();
         }
 
         /// <summary>

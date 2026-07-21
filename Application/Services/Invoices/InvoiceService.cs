@@ -95,6 +95,8 @@ namespace Application.Services.Invoices
                 Items = sale.Details.Select(d => new InvoiceItemDto
                 {
                     ProductName = d.Product?.Name.Value ?? string.Empty,
+                    ImageUrl = d.Product?.ImageUrl,
+                    CategoryName = d.Product?.Category?.Name.Value,
                     Quantity = d.Quantity.Value,
                     UnitPrice = d.UnitPrice.Value,
                     Subtotal = d.GetSubtotal(),

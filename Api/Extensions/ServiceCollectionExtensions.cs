@@ -89,12 +89,7 @@ namespace Api.Extensions
             // AuthService: Maneja login, registro y vinculación de usuarios con clientes
             services.AddScoped<IAuthService, AuthService>();
 
-            // ==============================================================================
-            // CLIENTES HTTP EXTERNOS
-            // ==============================================================================
-            // FastApiChatbotClient: Cliente HTTP para comunicarse con el servicio de chatbot
-            // Timeout de 90 segundos para dar tiempo al bot de IA a procesar consultas complejas
-            services.AddHttpClient<IChatbotClient, FastApiChatbotClient>(client =>
+            services.AddHttpClient<IChatbotClient, ChatbotHttpClient>(client =>
             {
                 client.Timeout = TimeSpan.FromSeconds(90);
             });
